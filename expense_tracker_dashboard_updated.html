@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense Tracker Dashboard</title>
+<style>
+:root{
+  --bg:#f5f7fb; --card:#ffffff; --text:#172033; --muted:#6b7280;
+  --border:#e7eaf0; --accent:#4f46e5; --accent2:#eef2ff;
+  --danger:#dc2626; --success:#059669; --shadow:0 8px 30px rgba(23,32,51,.07);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
+.container{max-width:1250px;margin:auto;padding:34px 24px 50px}
+.header{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:24px}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:800}
+h1{margin:5px 0 0;font-size:30px;letter-spacing:-.04em}
+.subtitle{color:var(--muted);margin-top:6px;font-size:14px}
+.controls{display:flex;align-items:center;gap:10px}
+select{background:white;border:1px solid var(--border);border-radius:10px;padding:11px 35px 11px 13px;font-size:14px;color:var(--text);outline:none;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
+.kpi{padding:20px 22px}
+.kpi-label{font-size:13px;color:var(--muted);font-weight:650}
+.kpi-value{font-size:28px;font-weight:800;letter-spacing:-.03em;margin-top:8px}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:5px}
+.section{padding:20px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}
+.section-title{font-size:17px;font-weight:800}
+.section-note{font-size:12px;color:var(--muted)}
+.category-layout{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.bars{display:flex;flex-direction:column;gap:13px}
+.bar-row{display:grid;grid-template-columns:125px 1fr 80px;gap:10px;align-items:center;font-size:13px}
+.bar-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{height:10px;background:#edf0f5;border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.bar-value{text-align:right;font-weight:750}
+.empty{padding:35px;text-align:center;color:var(--muted);font-size:14px}
+.chart-card{padding:20px}
+canvas{width:100%;height:250px;display:block}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:680px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:12px 14px;border-bottom:1px solid var(--border)}
+td{padding:14px;border-bottom:1px solid #f0f2f5;font-size:13px}
+tr.expense-row{cursor:pointer;transition:background .15s}
+tr.expense-row:hover{background:#fafbff}
+.name{font-weight:700}
+.date{color:var(--muted)}
+.amount{font-weight:800;color:var(--danger);text-align:right}
+.balance{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f3f4f6;font-size:11px;font-weight:700}
+.footer{color:var(--muted);font-size:11px;margin-top:16px;text-align:center}
+.tooltip{position:fixed;z-index:20;display:none;max-width:330px;background:#111827;color:#fff;border-radius:12px;padding:13px 15px;box-shadow:0 12px 40px rgba(0,0,0,.22);font-size:12px;line-height:1.5}
+.tooltip strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#c7d2fe;margin-bottom:4px}
+.tooltip .tt-name{font-weight:800;font-size:13px;margin-bottom:4px}
+.tooltip.empty-tip{color:#d1d5db}
+.details{display:none;margin-top:12px;padding:14px 16px;background:var(--accent2);border-radius:12px;font-size:13px}
+.details.show{display:block}
+.details strong{font-weight:800}
+@media(max-width:850px){
+ .header{align-items:flex-start;flex-direction:column}
+ .grid{grid-template-columns:1fr}
+ .category-layout{grid-template-columns:1fr}
+ .bar-row{grid-template-columns:105px 1fr 70px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <div class="eyebrow">Personal finance</div>
+      <h1>Expense Tracker</h1>
+      <div class="subtitle" id="subtitle">All expenses shown by default</div>
+    </div>
+    <div class="controls">
+      <label for="monthSelect" style="font-size:13px;font-weight:700">Month</label>
+      <select id="monthSelect"></select>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card kpi">
+      <div class="kpi-label">Total spent</div>
+      <div class="kpi-value" id="spent">₹0.00</div>
+      <div class="kpi-sub" id="spentSub">Expenses</div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-label">Balance</div>
+      <div class="kpi-value" id="balance">₹0.00</div>
+      <div class="kpi-sub" id="balanceSub">Latest account balance</div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-label">Expense count</div>
+      <div class="kpi-value" id="count">0</div>
+      <div class="kpi-sub" id="countSub">Transactions</div>
+    </div>
+  </div>
+
+  <div class="card section" style="margin-bottom:16px">
+    <div class="section-head">
+      <div class="section-title">Spending by category</div>
+      <div class="section-note">Click a category bar to filter expenses</div>
+    </div>
+    <div id="categoryBars" class="bars"></div>
+  </div>
+<div class="card section">
+    <div class="section-head">
+      <div>
+        <div class="section-title">All expenses</div>
+        <div class="section-note" id="tableNote">Click an expense for its remark</div>
+      </div>
+      <button id="clearCategory" style="display:none;border:0;background:#eef2ff;color:#4338ca;border-radius:9px;padding:8px 11px;font-weight:750;cursor:pointer">Clear category filter</button>
+    </div>
+    <div id="selectedDetails" class="details"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Name</th><th>Category</th><th style="text-align:right">Amount</th><th style="text-align:right">Balance</th></tr></thead>
+        <tbody id="expenseBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+const DATA = [{"date":"28 Jun 2026","isoDate":"2026-06-28","name":"O Ramesh","amount":5000.0,"category":"Personal Transfer","balance":5144.91,"remark":"Getting 5k"},{"date":"28 Jun 2026","isoDate":"2026-06-28","name":"Mr P Dhanush","amount":-250.0,"category":"Personal Transfer","balance":4894.91,"remark":"Zepto or instamart"},{"date":"29 Jun 2026","isoDate":"2026-06-29","name":"Best Muniyandi Vilas","amount":-120.0,"category":"Food","balance":4774.91,"remark":"Muniyandi vilas"},{"date":"29 Jun 2026","isoDate":"2026-06-29","name":"Tamil Nadu State","amount":-42.0,"category":"Transport","balance":4732.91,"remark":"local bus"},{"date":"29 Jun 2026","isoDate":"2026-06-29","name":"Tamil Nadu State","amount":-170.0,"category":"Transport","balance":4562.91,"remark":"madurai to coimbatore"},{"date":"30 Jun 2026","isoDate":"2026-06-30","name":"Cure Pharmacy and GE","amount":-174.0,"category":"Medical","balance":4388.91,"remark":"bought medicine in coimbatore"},{"date":"01 Jul 2026","isoDate":"2026-07-01","name":"HDFC Bank Interest","amount":11.0,"category":"Interest Income","balance":4399.91,"remark":""},{"date":"02 Jul 2026","isoDate":"2026-07-02","name":"Rajakani","amount":-90.0,"category":"Groceries","balance":4309.91,"remark":"local shopping in coimbatore"},{"date":"03 Jul 2026","isoDate":"2026-07-03","name":"Rajakani","amount":-6.0,"category":"Groceries","balance":4303.91,"remark":"local shopping in coimbatore"},{"date":"03 Jul 2026","isoDate":"2026-07-03","name":"M Rajakani","amount":-40.0,"category":"Groceries","balance":4263.91,"remark":"local shopping in coimbatore"},{"date":"03 Jul 2026","isoDate":"2026-07-03","name":"HDFC Bank","amount":-88.33,"category":"Bank Charges","balance":4175.58,"remark":""},{"date":"04 Jul 2026","isoDate":"2026-07-04","name":"Zepto Marketplace","amount":-167.0,"category":"Groceries","balance":4008.58,"remark":"Zepto or instamart"},{"date":"05 Jul 2026","isoDate":"2026-07-05","name":"Rajakani","amount":-90.0,"category":"Groceries","balance":3918.58,"remark":"local shopping in coimbatore"},{"date":"05 Jul 2026","isoDate":"2026-07-05","name":"Tamil Nadu State","amount":-170.0,"category":"Transport","balance":3748.58,"remark":"coimbatore to madurai"},{"date":"05 Jul 2026","isoDate":"2026-07-05","name":"Tamil Nadu State","amount":-15.0,"category":"Transport","balance":3733.58,"remark":"local bus"},{"date":"09 Jul 2026","isoDate":"2026-07-09","name":"Pugalenthi P","amount":-80.0,"category":"Snack","balance":3653.58,"remark":"Food: Evening snacks"},{"date":"14 Jul 2026","isoDate":"2026-07-14","name":"Gowsalya","amount":-45.0,"category":"Snack","balance":3608.58,"remark":"Food: Evening snacks"},{"date":"15 Jul 2026","isoDate":"2026-07-15","name":"Arjun","amount":-150.0,"category":"Personal Transfer","balance":3458.58,"remark":"Food: went on to get internship certificate and ate out"},{"date":"15 Jul 2026","isoDate":"2026-07-15","name":"Praveenkumar","amount":-60.0,"category":"Personal Transfer","balance":3398.58,"remark":"For cash "},{"date":"15 Jul 2026","isoDate":"2026-07-15","name":"Sabari Rajan","amount":-20.0,"category":"Personal Transfer","balance":3378.58,"remark":"Local bus"},{"date":"17 Jul 2026","isoDate":"2026-07-17","name":"Hotel Vasantham","amount":-30.0,"category":"Snack","balance":3348.58,"remark":"Travel snacks"},{"date":"17 Jul 2026","isoDate":"2026-07-17","name":"Tamil Nadu State","amount":-130.0,"category":"Transport","balance":3218.58,"remark":"madurai to tuticorin"},{"date":"18 Jul 2026","isoDate":"2026-07-18","name":"MR","amount":-10.0,"category":"Personal Transfer","balance":3208.58,"remark":""},{"date":"19 Jul 2026","isoDate":"2026-07-19","name":"Tamil Nadu State","amount":-133.0,"category":"Transport","balance":3075.58,"remark":"tuticorin to madurai"},{"date":"20 Jul 2026","isoDate":"2026-07-20","name":"Sabari Rajan","amount":-20.0,"category":"Personal Transfer","balance":3055.58,"remark":"Food: Evening snacks"},{"date":"21 Jul 2026","isoDate":"2026-07-21","name":"Deva Stelen D Thanga","amount":-50.0,"category":"Personal Transfer","balance":3005.58,"remark":"For cash "},{"date":"21 Jul 2026","isoDate":"2026-07-21","name":"Gowsalya","amount":-26.0,"category":"Snack","balance":2979.58,"remark":"Food: Evening snacks"},{"date":"21 Jul 2026","isoDate":"2026-07-21","name":"Guru Chithra","amount":-25.0,"category":"Snack","balance":2954.58,"remark":"Food: Evening snacks"},{"date":"22 Jul 2026","isoDate":"2026-07-22","name":"Gowsalya","amount":-25.0,"category":"Snack","balance":4829.58,"remark":"Food: Evening snacks"},{"date":"25 Jul 2026","isoDate":"2026-07-25","name":"HDFC Bank InstaAlert","amount":-2.84,"category":"Bank Charges","balance":2926.74,"remark":""},{"date":"27 Jul 2026","isoDate":"2026-07-27","name":"9363570617","amount":-550.0,"category":"Personal Transfer","balance":2376.74,"remark":"Freshers"},{"date":"27 Jul 2026","isoDate":"2026-07-27","name":"HDFC Bank InstaAlert","amount":-4.07,"category":"Bank Charges","balance":2372.67,"remark":""},{"date":"27 Jul 2026","isoDate":"2026-07-27","name":"Mohana Surya G","amount":-30.0,"category":"Snack","balance":2342.67,"remark":"Food: Evening snacks"},{"date":"27 Jul 2026","isoDate":"2026-07-27","name":"Sugapriya","amount":-3.0,"category":"Snack","balance":2339.67,"remark":"Food: Evening snacks"},{"date":"28 Jul 2026","isoDate":"2026-07-28","name":"Deepak Rajkumar","amount":-35.0,"category":"Snack","balance":2304.67,"remark":"Food: College snacks"},{"date":"29 Jul 2026","isoDate":"2026-07-29","name":"Gurunathar Hotel","amount":-30.0,"category":"Snack","balance":2274.67,"remark":"Food: College snacks"},{"date":"29 Jul 2026","isoDate":"2026-07-29","name":"Shanmugavel Salai","amount":-15.0,"category":"Snack","balance":2259.67,"remark":"Food: Juice"},{"date":"30 Jul 2026","isoDate":"2026-07-30","name":"Katheeswari Veg","amount":-10.0,"category":"Snack","balance":2249.67,"remark":""},{"date":"31 Jul 2026","isoDate":"2026-07-31","name":"Gurunathar Hotel","amount":-24.0,"category":"Snack","balance":2225.67,"remark":"Travel snacks"},{"date":"31 Jul 2026","isoDate":"2026-07-31","name":"Tamil Nadu State","amount":-133.0,"category":"Transport","balance":2092.67,"remark":"madurai to tuticorin"},{"date":"31 Jul 2026","isoDate":"2026-07-31","name":"Vinayaga Idli Kadai","amount":-30.0,"category":"Food","balance":2062.67,"remark":"tuticorin idli for paati"},{"date":"31 Jul 2026","isoDate":"2026-07-31","name":"New Cleopatra Theatre","amount":-180.0,"category":"Entertainment","balance":1882.67,"remark":"Spiderman: Brand New Day"},{"date":"01 Aug 2026","isoDate":"2026-08-01","name":"V V Agencies","amount":-45.0,"category":"Groceries","balance":1837.67,"remark":""},{"date":"02 Aug 2026","isoDate":"2026-08-02","name":"SETC State Express","amount":-145.0,"category":"Transport","balance":1692.67,"remark":"tuticorin to madurai"},{"date":"04 Aug 2026","isoDate":"2026-08-04","name":"Mr Aswin S","amount":-30.0,"category":"Snack","balance":1662.67,"remark":"Food: College snacks"},{"date":"04 Aug 2026","isoDate":"2026-08-04","name":"Sabari Rajan","amount":-10.0,"category":"Snack","balance":1652.67,"remark":"Food: Evening snacks"},{"date":"04 Aug 2026","isoDate":"2026-08-04","name":"Gowsalya","amount":-30.0,"category":"Snack","balance":1622.67,"remark":"Food: Evening snacks"},{"date":"06 Aug 2026","isoDate":"2026-08-06","name":"Gowsalya","amount":-20.0,"category":"Snack","balance":1602.67,"remark":"Food: Evening snacks"},{"date":"09 Aug 2026","isoDate":"2026-08-09","name":"Gowsalya","amount":-20.0,"category":"Snack","balance":1582.67,"remark":"Food: Evening snacks"},{"date":"09 Aug 2026","isoDate":"2026-08-09","name":"Sugapriya","amount":-50.0,"category":"Food","balance":1532.67,"remark":"Food: Gravy Chicken"},{"date":"10 Aug 2026","isoDate":"2026-08-10","name":"Deepak Rajkumar","amount":-10.0,"category":"Snack","balance":1522.67,"remark":"Food: Evening snacks"},{"date":"11 Aug 2026","isoDate":"2026-08-11","name":"Gowsalya","amount":-35.0,"category":"Snack","balance":1487.67,"remark":"Food: Evening snacks"},{"date":"13 Aug 2026","isoDate":"2026-08-13","name":"Sriram","amount":-35.0,"category":"Personal Transfer","balance":1457.67,"remark":"Buying A4 sheets"},{"date":"16 Aug 2026","isoDate":"2026-08-16","name":"Gowsalya","amount":-25.0,"category":"Snack","balance":1427.67,"remark":"Food: Evening snacks"},{"date":"16 Aug 2026","isoDate":"2026-08-16","name":"Gurunathar Hotel","amount":-2.0,"category":"Personal Transfer","balance":1425.67,"remark":"Salt"},{"date":"18 Aug 2026","isoDate":"2026-08-18","name":"Chitra Gurusamy","amount":-40.0,"category":"Snack","balance":1385.67,"remark":"Food: Evening snacks"},{"date":"18 Aug 2026","isoDate":"2026-08-18","name":"Chandra Selvaraj","amount":-15.0,"category":"Personal Transfer","balance":1370.67,"remark":"Washing powder"},{"date":"19 Aug 2026","isoDate":"2026-08-19","name":"Nganeshwari Foods","amount":-20.0,"category":"Food","balance":1350.67,"remark":"Food: Evening snacks"},{"date":"20 Aug 2026","isoDate":"2026-08-20","name":"8682817566","amount":-100.0,"category":"Personal Transfer","balance":1250.67,"remark":"to Cash"},{"date":"21 Aug 2026","isoDate":"2026-08-21","name":"Tamil Nadu State","amount":-30.0,"category":"Transport","balance":1220.67,"remark":"local bus"},{"date":"25 Aug 2026","isoDate":"2026-08-25","name":"Rajakani","amount":-75.0,"category":"Groceries","balance":1145.67,"remark":"local shopping in coimbatore"},{"date":"26 Aug 2026","isoDate":"2026-08-26","name":"Rajakani","amount":-35.0,"category":"Groceries","balance":1110.67,"remark":"local shopping in coimbatore"},{"date":"26 Aug 2026","isoDate":"2026-08-26","name":"Blinkit","amount":-168.0,"category":"Groceries","balance":942.67,"remark":"Blinkit"},{"date":"26 Aug 2026","isoDate":"2026-08-26","name":"Tamil Nadu State","amount":-170.0,"category":"Transport","balance":772.67,"remark":"coimbatore to madurai"},{"date":"27 Aug 2026","isoDate":"2026-08-27","name":"Tamil Nadu State","amount":-28.0,"category":"Transport","balance":744.67,"remark":"local bus"},{"date":"27 Aug 2026","isoDate":"2026-08-27","name":"Gurunathar Hotel","amount":-15.0,"category":"Food","balance":729.67,"remark":"Food: Juice"},{"date":"28 Aug 2026","isoDate":"2026-08-28","name":"Sabari Rajan","amount":-40.0,"category":"Personal Transfer","balance":689.67,"remark":"Food: Evening snacks"},{"date":"30 Aug 2026","isoDate":"2026-08-30","name":"Sabari Rajan","amount":-10.0,"category":"Personal Transfer","balance":679.67,"remark":"Washing powder"},{"date":"30 Aug 2026","isoDate":"2026-08-30","name":"Sugapriya","amount":-10.0,"category":"Snack","balance":669.67,"remark":"Groundnut"},{"date":"02 Sep 2026","isoDate":"2026-09-02","name":"Sabari Rajan","amount":-5.0,"category":"Personal Transfer","balance":664.67,"remark":"lollipop"},{"date":"03 Sep 2026","isoDate":"2026-09-03","name":"SETC State Express","amount":-145.0,"category":"Transport","balance":519.67,"remark":"madurai to tuticorin"},{"date":"03 Sep 2026","isoDate":"2026-09-03","name":"Belson Milk Agency","amount":-37.0,"category":"Groceries","balance":482.67,"remark":"tuticorin milk"},{"date":"06 Sep 2026","isoDate":"2026-09-06","name":"New Muthu Medicals","amount":-50.0,"category":"Medical","balance":432.67,"remark":"saridon strip"},{"date":"06 Sep 2026","isoDate":"2026-09-06","name":"Tamil Nadu State","amount":-133.0,"category":"Transport","balance":299.67,"remark":"tuticorin to madurai"},{"date":"06 Sep 2026","isoDate":"2026-09-06","name":"Hotel Vasantham","amount":-20.0,"category":"Food","balance":279.67,"remark":"water bottle"}];
+const MONTHS = ["2026-06", "2026-07", "2026-08", "2026-09"];
+
+const money = n => "₹" + Number(n).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const monthLabel = ym => {
+  const [y,m]=ym.split("-");
+  return new Date(Number(y),Number(m)-1,1).toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+};
+
+const monthSelect=document.getElementById("monthSelect");
+monthSelect.innerHTML='<option value="ALL">All months</option>'+MONTHS.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join("");
+
+let selectedCategory = null;
+let selectedMonth = "ALL";
+
+function filteredExpenses(){
+  return DATA.filter(d => d.amount < 0 && (selectedMonth==="ALL" || d.isoDate.startsWith(selectedMonth)) && (!selectedCategory || d.category===selectedCategory));
+}
+function monthData(){
+  return DATA.filter(d => selectedMonth==="ALL" || d.isoDate.startsWith(selectedMonth));
+}
+function render(){
+  const md=monthData();
+  const expenses=filteredExpenses();
+  const allMonthExpenses=md.filter(d=>d.amount<0);
+  const spent=-allMonthExpenses.reduce((s,d)=>s+d.amount,0);
+  const last=md.slice().sort((a,b)=>a.isoDate.localeCompare(b.isoDate)).at(-1);
+  document.getElementById("spent").textContent=money(spent);
+  document.getElementById("balance").textContent=last?money(last.balance):"₹0.00";
+  document.getElementById("count").textContent=allMonthExpenses.length.toLocaleString("en-IN");
+  document.getElementById("spentSub").textContent=selectedMonth==="ALL"?"Across all months":monthLabel(selectedMonth);
+  document.getElementById("balanceSub").textContent=selectedMonth==="ALL"?"Latest account balance":"Ending balance for "+monthLabel(selectedMonth);
+  document.getElementById("countSub").textContent=selectedCategory?`${selectedCategory} expenses shown`:"Expense transactions";
+  document.getElementById("subtitle").textContent=selectedMonth==="ALL"?"All expenses shown by default":`Showing expenses for ${monthLabel(selectedMonth)}`;
+
+  renderCategories(allMonthExpenses);
+  renderTable(expenses);
+  drawChart(allMonthExpenses);
+}
+
+function renderCategories(expenses){
+  const sums={};
+  expenses.forEach(d=>sums[d.category]=(sums[d.category]||0)+(-d.amount));
+  const entries=Object.entries(sums).sort((a,b)=>b[1]-a[1]);
+  const max=entries[0]?.[1]||1;
+  const el=document.getElementById("categoryBars");
+  if(!entries.length){el.innerHTML='<div class="empty">No expenses for this selection.</div>';return}
+  el.innerHTML=entries.map(([cat,val])=>`
+    <div class="bar-row" data-category="${escapeAttr(cat)}" title="Filter by ${escapeAttr(cat)}" style="cursor:pointer">
+      <div class="bar-label">${escapeHtml(cat)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(val/max*100).toFixed(1)}%"></div></div>
+      <div class="bar-value">${money(val)}</div>
+    </div>`).join("");
+  el.querySelectorAll(".bar-row").forEach(row=>row.onclick=()=>{
+    selectedCategory=row.dataset.category;
+    document.getElementById("clearCategory").style.display="block";
+    render();
+  });
+}
+
+function renderTable(rows){
+  const body=document.getElementById("expenseBody");
+  const sorted=rows.slice().sort((a,b)=>b.isoDate.localeCompare(a.isoDate));
+  body.innerHTML=sorted.length?sorted.map((d,i)=>`
+    <tr class="expense-row" data-i="${DATA.indexOf(d)}">
+      <td class="date">${escapeHtml(d.date)}</td>
+      <td class="name">${escapeHtml(d.name)}</td>
+      <td><span class="pill">${escapeHtml(d.category)}</span></td>
+      <td class="amount">−${money(-d.amount).slice(1)}</td>
+      <td class="balance">${money(d.balance)}</td>
+    </tr>`).join(""):'<tr><td colspan="5"><div class="empty">No expenses found.</div></td></tr>';
+  body.querySelectorAll(".expense-row").forEach(row=>row.onclick=e=>{
+    const d=DATA[Number(row.dataset.i)];
+    showDetails(d);
+  });
+}
+
+function showDetails(d){
+  const box=document.getElementById("selectedDetails");
+  box.classList.add("show");
+  box.innerHTML=`<strong>${escapeHtml(d.name)}</strong> · ${escapeHtml(d.date)} · ${money(-d.amount)}<br>
+  <span style="color:#4b5563">Remark:</span> ${d.remark?escapeHtml(d.remark):'<span style="color:#6b7280">No remark</span>'}`;
+  box.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function drawChart(expenses){
+  const canvas=document.getElementById("spendChart"), rect=canvas.getBoundingClientRect(), dpr=devicePixelRatio||1;
+  canvas.width=rect.width*dpr; canvas.height=250*dpr;
+  const ctx=canvas.getContext("2d"); ctx.scale(dpr,dpr);
+  const w=rect.width,h=250,p={l:48,r:18,t:18,b:34};
+  ctx.clearRect(0,0,w,h);
+  const byDay={}; expenses.forEach(d=>byDay[d.isoDate]=(byDay[d.isoDate]||0)+(-d.amount));
+  const keys=Object.keys(byDay).sort();
+  if(!keys.length){ctx.fillStyle="#6b7280";ctx.font="14px system-ui";ctx.fillText("No expense data for this selection.",p.l,100);return}
+  const vals=keys.map(k=>byDay[k]), max=Math.max(...vals,1);
+  const x=i=>p.l+(keys.length===1?(w-p.l-p.r)/2:i*(w-p.l-p.r)/(keys.length-1));
+  const y=v=h-p.b-(v/max)*(h-p.t-p.b);
+  ctx.strokeStyle="#e5e7eb";ctx.lineWidth=1;
+  for(let j=0;j<=4;j++){const yy=p.t+j*(h-p.t-p.b)/4;ctx.beginPath();ctx.moveTo(p.l,yy);ctx.lineTo(w-p.r,yy);ctx.stroke();
+    ctx.fillStyle="#9ca3af";ctx.font="10px system-ui";ctx.fillText(money(max*(1-j/4)).replace(".00",""),4,yy+3)}
+  ctx.strokeStyle="#4f46e5";ctx.lineWidth=2.5;ctx.beginPath();
+  keys.forEach((k,i)=>{const xx=x(i),yy=y(vals[i]);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy)});ctx.stroke();
+  ctx.fillStyle="#4f46e5";keys.forEach((k,i)=>{ctx.beginPath();ctx.arc(x(i),y(vals[i]),3.5,0,Math.PI*2);ctx.fill()});
+  ctx.fillStyle="#6b7280";ctx.font="10px system-ui";
+  const step=Math.max(1,Math.ceil(keys.length/7));
+  keys.forEach((k,i)=>{if(i%step===0||i===keys.length-1){const label=new Date(k+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short"});ctx.fillText(label,x(i)-15,h-10)}});
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function escapeAttr(s){return escapeHtml(s)}
+
+monthSelect.onchange=()=>{selectedMonth=monthSelect.value;selectedCategory=null;document.getElementById("clearCategory").style.display="none";document.getElementById("selectedDetails").classList.remove("show");render()};
+document.getElementById("clearCategory").onclick=()=>{selectedCategory=null;document.getElementById("clearCategory").style.display="none";render()};
+window.onresize=()=>drawChart(monthData().filter(d=>d.amount<0));
+render();
+</script>
+</body>
+</html>
